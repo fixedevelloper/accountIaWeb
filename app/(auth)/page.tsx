@@ -37,6 +37,7 @@ export default function LoginPage() {
 
         setLoading(false);
 
+        console.log(result)
         if (result?.error === "EMAIL_NOT_VERIFIED") {
             localStorage.setItem("unverified_email", formData.email);
             setStatus("verifying");
@@ -247,7 +248,7 @@ export default function LoginPage() {
                             </Link>
                         </p>
                         <p className="text-xs text-gray-500 mt-2 text-center">
-                            Édition Pro • Cameroun 2026 • Sécurisé par NextAuth
+                            Édition Pro • Entreprise 2026 • Sécurisé
                         </p>
                     </div>
                 </div>

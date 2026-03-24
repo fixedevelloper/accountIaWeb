@@ -11,8 +11,11 @@ import {
 } from "lucide-react";
 
 const countries = [
+    { value: "CG", label: "Congo 🇨🇬", currency: "XAF" },
     { value: "CM", label: "Cameroun 🇨🇲", currency: "XAF" },
-    { value: "FR", label: "France 🇫🇷", currency: "EUR" },
+    { value: "CD", label: "RDC 🇨🇩", currency: "CDF" },
+    { value: "GA", label: "Gabon 🇬🇦", currency: "XAF" },
+    { value: "TD", label: "Tchad 🇹🇩", currency: "XAF" },
     { value: "SN", label: "Sénégal 🇸🇳", currency: "XOF" },
     { value: "CI", label: "Côte d'Ivoire 🇨🇮", currency: "XOF" },
     { value: "TG", label: "Togo 🇹🇬", currency: "XOF" }
@@ -48,6 +51,7 @@ export default function CreateCompany() {
         if (status === "authenticated" && session?.user?.company) {
             router.push("/dashboard");
         }
+        console.log(formData.email)
     }, [session, status, router]);
 
     const handleChange = useCallback((e:any) => {
@@ -89,7 +93,7 @@ export default function CreateCompany() {
             setSuccess(true);
 
             setTimeout(() => {
-                router.push("/dashboard");
+                router.push("/");
             }, 2000);
 
         } catch (err:any) {
@@ -241,14 +245,14 @@ export default function CreateCompany() {
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    disabled={loading}
+                                    disabled={true}
                                     className={`
                                         w-full px-5 py-4 pl-12 rounded-2xl border-2 font-semibold text-lg transition-all
                                         bg-white/60 backdrop-blur-sm shadow-lg focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500
                                         hover:border-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed
                                         ${error ? 'border-red-300 bg-red-50/50' : 'border-gray-200'}
                                     `}
-                                    placeholder="contact@dupont.cm"
+                                    placeholder={formData.email}
                                 />
                             </div>
                         </div>

@@ -29,7 +29,7 @@ const StatsCard = ({ title, value, change, trend, color, icon: Icon }: StatsCard
     <div className="group bg-white/70 backdrop-blur-xl rounded-3xl p-8 border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 h-full">
         <div className="flex items-start justify-between mb-6">
             <div className={`p-3 rounded-2xl shadow-lg ${color === 'green' ? 'bg-gradient-to-br from-emerald-400 to-green-500' : 'bg-gradient-to-br from-blue-500 to-indigo-500'}`}>
-                <Icon className="w-6 h-6 text-white drop-shadow-md" />  // ✅ Fonctionne avec Lucide
+                <Icon className="w-6 h-6 text-white drop-shadow-md" />
             </div>
             <div className={`w-3 h-3 rounded-full ${trend === 'up' ? 'bg-emerald-400 animate-pulse shadow-lg' : 'bg-red-400 animate-pulse shadow-lg'}`} />
         </div>
@@ -130,7 +130,7 @@ export default function Dashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/50 p-6 lg:p-8 relative">  // ✅ relative ajouté
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/50 p-6 lg:p-8 relative">
             <div className="max-w-7xl mx-auto">
 
                 {/* Header */}

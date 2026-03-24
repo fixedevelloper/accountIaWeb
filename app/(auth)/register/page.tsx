@@ -74,7 +74,7 @@ export default function RegisterPage() {
                 setError(data.message || "Erreur lors de l'inscription");
                 return;
             }
-
+            localStorage.setItem("company_email", formData.email);
             setSuccess(true);
             setTimeout(() => router.push("/onboarding/company"), 2500);
 

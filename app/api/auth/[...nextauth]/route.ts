@@ -35,8 +35,21 @@ export const authOptions: NextAuthOptions = {  // ✅ Typé NextAuthOptions
                         company: result.company || null,
                     };
                 } catch (error: any) {
-                    // ... votre gestion d'erreur existante
-                    throw new Error(error?.message || "LOGIN_FAILED");
+                    const status = error.response?.status;
+                    const data = error.response?.data;
+
+                    // 🔹 Cas email non vérifié
+                    if (status === 403 && data.message === "email_not_verified") {
+                        throw new Error("EMAIL_NOT_VERIFIED");
+                    }
+
+                    // 🔹 Cas entreprise non créée pour owner
+                    if (status === 403 && data.message === "company_missing") {
+                        throw new Error("COMPANY_MISSING");
+                    }
+
+                    // 🔹 Toutes les autres erreurs
+                    throw new Error(data?.message || "LOGIN_FAILED");
                 }
             }
         })
