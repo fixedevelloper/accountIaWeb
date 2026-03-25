@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import {useState, useCallback, useRef, useEffect} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,7 +8,6 @@ import {
     AlertCircle, X, Eye, Receipt, Smartphone
 } from "lucide-react";
 import {api} from "../../../../services/api";
-
 interface UploadDropzoneProps {
     onFileSelect: (file: File) => void;
 }
@@ -132,7 +131,6 @@ export default function UploadPage() {
     const [progress, setProgress] = useState<number>(0);  // ✅ Typé number
     const [error, setError] = useState<string | null>(null);  // ✅ Typé string | null
     const [success, setSuccess] = useState<boolean>(false);  // ✅ Typé boolean
-
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
         setPreview(URL.createObjectURL(selectedFile));
@@ -277,11 +275,20 @@ export default function UploadPage() {
                                 {preview && (
                                     <div className="p-8 lg:p-12">
                                         <div className="aspect-[4/3] lg:aspect-video bg-gradient-to-br from-slate-100 to-gray-200 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 mx-auto max-w-4xl">
-                                            {preview.includes('.pdf') ? (
-                                                <iframe src={preview} className="w-full h-full border-0" />
+
+                                            {file?.type === "application/pdf" ? (
+                                                <iframe
+                                                    src={URL.createObjectURL(file)}
+                                                    className="w-full h-full border-0"
+                                                />
                                             ) : (
-                                                <img src={preview} alt="Aperçu" className="w-full h-full object-contain" />
+                                                <img
+                                                    src={preview}
+                                                    alt="Aperçu"
+                                                    className="w-full h-full object-contain"
+                                                />
                                             )}
+
                                         </div>
                                     </div>
                                 )}

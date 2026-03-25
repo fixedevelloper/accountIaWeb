@@ -15,6 +15,7 @@ type EntryLine = {
 };
 
 type FormType = {
+    due_date: string;
     supplier_name: string;
     invoice_number: string;
     invoice_date: string;
@@ -36,10 +37,16 @@ export default function DocumentEditPage() {
     const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [lines, setLines] = useState<EntryLine[]>([]);
 
+
+    const [formInitialized, setFormInitialized] = useState(false);
+    const [isDirty, setIsDirty] = useState(false); // 👈 détecte modif user
+
+
     const [form, setForm] = useState<FormType>({
         supplier_name: "",
         invoice_number: "",
         invoice_date: "",
+        due_date: "",
         total_amount: "",
         currency: "XAF",
         tva: 19.25,
@@ -48,8 +55,11 @@ export default function DocumentEditPage() {
     });
 
     // ================= FETCH =================
+
     useEffect(() => {
-        async function fetchData() {
+        if (!id) return;
+
+        const fetchData = async () => {
             try {
                 const res = await api.get<Document>(`/documents/${id}`);
                 const doc = res.data;
@@ -60,28 +70,14 @@ export default function DocumentEditPage() {
                 const ext = doc.latest_extraction || doc.extractions?.[0] || null;
                 setExtraction(ext);
 
-                if (ext) {
-                    setForm({
-                        supplier_name: ext.supplier_name || "",
-                        invoice_number: ext.invoice_number || "",
-                        invoice_date: ext.invoice_date || "",
-                        total_amount: String(ext.total_amount || ""),
-                        currency: ext.currency || "XAF",
-                        tva: 19.25,
-                        invoice_type: "purchase" as const,
-                        amount_ht: ext.amount_ht || 0,
-                    });
-                }
-
                 if (doc.journal_entries?.length) {
                     const entry = doc.journal_entries[0];
-                    const mapped: EntryLine[] = entry.lines.map((l:JournalEntryLine) => ({  // ✅ Typé
+                    setLines(entry.lines.map((l: JournalEntryLine) => ({
                         account_id: l.account_id,
                         account_label: `${l.account.code} - ${l.account.name}`,
                         debit: l.debit,
                         credit: l.credit,
-                    }));
-                    setLines(mapped);
+                    })));
                 }
 
             } catch (e) {
@@ -89,9 +85,85 @@ export default function DocumentEditPage() {
             } finally {
                 setLoading(false);
             }
-        }
+        };
 
-        if (id) fetchData();
+        fetchData();
+    }, [id]);
+    useEffect(() => {
+        if (!id) return;
+
+        let cancelled = false;
+        let attempts = 0;
+        const MAX = 60;
+
+        const poll = async () => {
+            if (cancelled || attempts >= MAX) return;
+
+            try {
+                attempts++;
+
+                const res = await api.get(`/documents/${id}`);
+                const doc = res.data;
+
+                console.log("Polling...", attempts, doc.status);
+
+                if (!['pending', 'processing','uploaded'].includes(doc.status)) {
+                    setDocument(doc);
+
+                    const ext = doc.latest_extraction || doc.extractions?.[0] || null;
+                    setExtraction(ext);
+                    if (doc.journal_entries?.length) {
+                        const entry = doc.journal_entries[0];
+                        const mapped: EntryLine[] = entry.lines.map((l:JournalEntryLine) => ({  // ✅ Typé
+                            account_id: l.account_id,
+                            account_label: `${l.account.code} - ${l.account.name}`,
+                            debit: l.debit,
+                            credit: l.credit,
+                        }));
+                        setLines(mapped);
+                    }
+
+
+                    return; // ✅ STOP propre
+                }
+
+            } catch (e) {
+                console.error("Polling error", e);
+
+                if (attempts > 10) return; // stop après erreurs
+            }
+
+            // ✅ relance manuelle (meilleur que setInterval)
+            setTimeout(poll, 3000);
+        };
+
+        poll();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [id]);
+    useEffect(() => {
+        if (!extraction || formInitialized || isDirty) return;
+
+        setForm({
+            due_date: extraction.invoice_date || "",
+            supplier_name: extraction.supplier_name || "",
+            invoice_number: extraction.invoice_number || "",
+            invoice_date: extraction.invoice_date || "",
+            total_amount: String(extraction.total_amount || ""),
+            currency: extraction.currency || "XAF",
+            tva: 19.25,
+            invoice_type: "purchase",
+            amount_ht: extraction.amount_ht || 0,
+        });
+
+        setFormInitialized(true);
+
+    }, [extraction, formInitialized, isDirty]);
+    useEffect(() => {
+        setFormInitialized(false);
+        setIsDirty(false);
     }, [id]);
 
     // ================= FORM HANDLERS =================
@@ -102,7 +174,42 @@ export default function DocumentEditPage() {
             [name]: name === "tva" || name === "amount_ht" ? Number(value) || 0 : value,
         }));
     };
+    const isProcessing = document && ['processing', 'uploaded'].includes(document.status);
+    // Ajoutez ce useEffect pour sync form ↔ extraction
+/*    useEffect(() => {
+        if (extraction && !Object.keys(form).some(Boolean)) {
+            setDocument(document);
+            setEntries(document?.journal_entries || []);
 
+            const ext = document?.latest_extraction || document?.extractions?.[0] || null;
+            setExtraction(ext);
+
+            if (ext) {
+                setForm({
+                    due_date: "",
+                    supplier_name: ext.supplier_name || "",
+                    invoice_number: ext.invoice_number || "",
+                    invoice_date: ext.invoice_date || "",
+                    total_amount: String(ext.total_amount || ""),
+                    currency: ext.currency || "XAF",
+                    tva: 19.25,
+                    invoice_type: "purchase" as const,
+                    amount_ht: ext.amount_ht || 0
+                });
+            }
+
+            if (document?.journal_entries?.length) {
+                const entry = document.journal_entries[0];
+                const mapped: EntryLine[] = entry.lines.map((l:JournalEntryLine) => ({  // ✅ Typé
+                    account_id: l.account_id,
+                    account_label: `${l.account.code} - ${l.account.name}`,
+                    debit: l.debit,
+                    credit: l.credit,
+                }));
+                setLines(mapped);
+            }
+        }
+    }, [extraction,document]);*/
     const addLine = (): void => {
         setLines([...lines, { account_id: null, account_label: "", debit: 0, credit: 0 }]);
     };
@@ -215,7 +322,7 @@ export default function DocumentEditPage() {
                             {document.file_path ? (
                                 document.file_path.endsWith(".pdf") ? (
                                     <iframe
-                                        src={`${process.env.NEXT_PUBLIC_STORAGE_URL}${document.file_path}`}
+                                        src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${document.file_path}`}
                                         className="w-full h-full rounded-xl shadow-inner"
                                     />
                                 ) : (
@@ -235,7 +342,17 @@ export default function DocumentEditPage() {
                     </div>
 
                     {/* FORM & VENTILATION */}
-                    <div className="lg:col-span-1 space-y-6">
+                    {isProcessing ? (
+                        <div className="p-6 bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200/50 rounded-2xl shadow-sm">
+                            <div className="flex items-center justify-center gap-3 text-blue-800">
+                                <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                                <div>
+                                    <div className="font-semibold text-lg">Analyse IA en cours</div>
+                                    <div className="text-sm opacity-75">Patience, cela prend ~12s</div>
+                                </div>
+                            </div>
+                        </div>
+                    ):( <div className="lg:col-span-1 space-y-6">
 
                         {/* DOCUMENT INFO */}
                         <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6">
@@ -262,49 +379,36 @@ export default function DocumentEditPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Fournisseur
                                     </label>
-                                <input
-                                    name="supplier_name"
-                                    value={form.supplier_name}
-                                    onChange={handleChange}
-                                    placeholder="Nom fournisseur"
-                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                />
+                                    <input
+                                        name="supplier_name"
+                                        value={form.supplier_name}
+                                        onChange={handleChange}
+                                        placeholder="Nom fournisseur"
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Numero de facture
                                     </label>
-                                <input
-                                    name="invoice_number"
-                                    value={form.invoice_number}
-                                    onChange={handleChange}
-                                    placeholder="FACT-2026-001"
-                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Date Emission
-                                    </label>
-                                <input
-                                    type="date"
-                                    name="invoice_date"
-                                    value={form.invoice_date}
-                                    onChange={handleChange}
-                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Date Echeance
-                                    </label>
                                     <input
-                                        type="date"
-                                        name="invoice_date"
-                                        value={form.invoice_date}
+                                        name="invoice_number"
+                                        value={form.invoice_number}
                                         onChange={handleChange}
+                                        placeholder="FACT-2026-001"
                                         className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                                     />
+                                </div>
+                                <div>
+                                    <label>Date Émission</label>
+                                    <input className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                           type="date" name="invoice_date" value={form.invoice_date} onChange={handleChange} />
+                                </div>
+                                <div>
+                                    <label>Date Échéance</label>
+                                    <input
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                        type="date" name="due_date" value={form.due_date} onChange={handleChange} />
                                 </div>
                             </div>
                         </div>
@@ -412,7 +516,8 @@ export default function DocumentEditPage() {
                                 Retour
                             </button>
                         </div>
-                    </div>
+                    </div>)}
+
                 </div>
             </div>
         </div>
