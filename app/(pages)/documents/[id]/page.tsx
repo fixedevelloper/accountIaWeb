@@ -258,7 +258,93 @@ export default function DocumentEditPage() {
                                         <option value="expense">Dépense diverse</option>
                                     </select>
                                 </div>
-                                {/* ... autres champs ... */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Fournisseur
+                                    </label>
+                                <input
+                                    name="supplier_name"
+                                    value={form.supplier_name}
+                                    onChange={handleChange}
+                                    placeholder="Nom fournisseur"
+                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Numero de facture
+                                    </label>
+                                <input
+                                    name="invoice_number"
+                                    value={form.invoice_number}
+                                    onChange={handleChange}
+                                    placeholder="FACT-2026-001"
+                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Date Emission
+                                    </label>
+                                <input
+                                    type="date"
+                                    name="invoice_date"
+                                    value={form.invoice_date}
+                                    onChange={handleChange}
+                                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Date Echeance
+                                    </label>
+                                    <input
+                                        type="date"
+                                        name="invoice_date"
+                                        value={form.invoice_date}
+                                        onChange={handleChange}
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* FINANCIAL INFO */}
+                        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl shadow-xl border border-white/50 p-6">
+                            <h3 className="font-semibold text-gray-800 mb-4">💰 Montants</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">HT</label>
+                                    <input
+                                        name="amount_ht"
+                                        type="number"
+                                        value={form.amount_ht}
+                                        onChange={handleChange}
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">TVA %</label>
+                                    <input
+                                        name="tva"
+                                        type="number"
+                                        step="0.01"
+                                        value={form.tva}
+                                        onChange={handleChange}
+                                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                                    />
+                                </div>
+                                <div className="flex items-end">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">TTC</label>
+                                    <input
+                                        disabled
+                                        value={(form.amount_ht * (1 + form.tva / 100)).toLocaleString('fr-FR')}
+                                        className="w-full p-3 border-2 border-emerald-200 bg-emerald-50 rounded-xl font-semibold text-lg text-emerald-800"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-3 text-sm text-gray-600">
+                                Devise: <span className="font-semibold text-blue-600">{form.currency}</span>
                             </div>
                         </div>
 
