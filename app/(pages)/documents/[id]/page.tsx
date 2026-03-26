@@ -1,10 +1,11 @@
 "use client";
 
-import {useEffect, useState, useRef, ChangeEvent, FormEvent} from "react";  // ✅ useRef ajouté
+import React, {useEffect, useState, useRef, ChangeEvent, FormEvent} from "react";  // ✅ useRef ajouté
 import {useParams, useRouter} from "next/navigation";
 import {api} from "../../../../services/api";
 import { Trash2, Plus, Save, ArrowLeft, FileText } from "lucide-react";
 import {Document,DocumentExtraction, JournalEntry, JournalEntryLine} from "../../../../types/types";
+import DocumentPreview from "../../../../components/ui/DocumentPreview";
 
 // ✅ Types
 type EntryLine = {
@@ -318,8 +319,10 @@ export default function DocumentEditPage() {
                                 Aperçu Document
                             </h2>
                         </div>
-                        <div className="p-2 flex items-center justify-center h-[500px]">
-                            {document.file_path ? (
+                        {/* <DocumentPreview document={document} />*/}
+                          <div className="p-2 flex items-center justify-center h-[500px]">
+
+                        {document.file_path ? (
                                 document.file_path.endsWith(".pdf") ? (
                                     <iframe
                                         src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${document.file_path}`}

@@ -9,7 +9,7 @@ import {
     CalculatorIcon,
     BanknotesIcon,
     ChartBarIcon,
-    Cog6ToothIcon
+    Cog6ToothIcon,ChatBubbleBottomCenterIcon
 } from "@heroicons/react/24/outline"
 import { ChevronDown, ChevronUp, LayoutDashboard, FileText, Users, Settings, Receipt, Calendar, BarChart3, Wallet } from "lucide-react";
 import React from "react";
@@ -29,6 +29,7 @@ interface MenuItem {
 
 export const menuItems: MenuItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: HomeIcon, hasSubMenu: false },
+    { label: "Project", href: "/projects", icon: ChatBubbleBottomCenterIcon, hasSubMenu: false },
     {
         label: "Documents",
         href: "/documents",
