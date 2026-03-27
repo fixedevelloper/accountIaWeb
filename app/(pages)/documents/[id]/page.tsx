@@ -3,9 +3,31 @@
 import React, {useEffect, useState, useRef, ChangeEvent, FormEvent} from "react";  // ✅ useRef ajouté
 import {useParams, useRouter} from "next/navigation";
 import {api} from "../../../../services/api";
-import { Trash2, Plus, Save, ArrowLeft, FileText } from "lucide-react";
-import {Document,DocumentExtraction, JournalEntry, JournalEntryLine} from "../../../../types/types";
+import {Trash2, Plus, Save, ArrowLeft, FileText, Cpu} from "lucide-react";
+import {Document, DocumentExtraction, JournalEntry, JournalEntryLine, Message} from "../../../../types/types";
 import DocumentPreview from "../../../../components/ui/DocumentPreview";
+import {DocumentPreviewCard} from "../../../../components/ui/DocumentPreviewCard";
+import {MiniChatUserOnly} from "../../../../components/ui/MiniChatUserOnly";
+
+const projectCategories = {
+    factures: { label: '💼 Factures & Reçus', types: ['invoice', 'receipt', 'credit_note'] },
+    services: { label: '🏢 Services', types: ['telecom', 'transport', 'restaurant', 'hotel'] },
+    autres: { label: '📋 Autres', types: ['contract', 'bank_statement', 'ticket'] }
+} as const;
+
+const projectTypeLabels: Record<string, string> = {
+    invoice: 'Facture fournisseur',
+    receipt: 'Reçu / Ticket',
+    credit_note: 'Avoir client',
+    telecom: 'Facture télécom',
+    transport: 'Transport/Logistique',
+    restaurant: 'Restaurant',
+    hotel: 'Hôtel',
+    contract: 'Contrat',
+    bank_statement: 'Relevé bancaire',
+    ticket: 'Ticket/Preuve'
+};
+
 
 // ✅ Types
 type EntryLine = {
@@ -33,11 +55,13 @@ export default function DocumentEditPage() {
     const saveBtnRef = useRef<HTMLButtonElement>(null);  // ✅ useRef pour bouton Save
 
     const [loading, setLoading] = useState(true);
+    const [loadingMessage, setLoadingMessage] = useState(false);
     const [document, setDocument] = useState<Document | null>(null);
     const [extraction, setExtraction] = useState<DocumentExtraction | null>(null);
     const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [lines, setLines] = useState<EntryLine[]>([]);
-
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState("");
 
     const [formInitialized, setFormInitialized] = useState(false);
     const [isDirty, setIsDirty] = useState(false); // 👈 détecte modif user
@@ -54,7 +78,18 @@ export default function DocumentEditPage() {
         invoice_type: "purchase",
         amount_ht: 0,
     });
+    const fetchMessages = async (documenmtId: number) => {
+        try {
+            const res = await api.get(`/documents/${documenmtId}/messages`);
+            console.log('Messages:', res.data.data);
 
+            // ✅ FORCE Array
+            setMessages(Array.isArray(res.data.data) ? res.data.data : []);
+        } catch (err) {
+            console.error(err);
+            setMessages([]); // Reset safe
+        }
+    };
     // ================= FETCH =================
 
     useEffect(() => {
@@ -166,7 +201,12 @@ export default function DocumentEditPage() {
         setFormInitialized(false);
         setIsDirty(false);
     }, [id]);
-
+    useEffect(() => {
+        if (id) {
+            fetchMessages(Number(id));
+        }
+        console.log(messages)
+    }, [id]);
     // ================= FORM HANDLERS =================
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {  // ✅ Typé
         const { name, value } = e.target;
@@ -176,41 +216,7 @@ export default function DocumentEditPage() {
         }));
     };
     const isProcessing = document && ['processing', 'uploaded'].includes(document.status);
-    // Ajoutez ce useEffect pour sync form ↔ extraction
-/*    useEffect(() => {
-        if (extraction && !Object.keys(form).some(Boolean)) {
-            setDocument(document);
-            setEntries(document?.journal_entries || []);
 
-            const ext = document?.latest_extraction || document?.extractions?.[0] || null;
-            setExtraction(ext);
-
-            if (ext) {
-                setForm({
-                    due_date: "",
-                    supplier_name: ext.supplier_name || "",
-                    invoice_number: ext.invoice_number || "",
-                    invoice_date: ext.invoice_date || "",
-                    total_amount: String(ext.total_amount || ""),
-                    currency: ext.currency || "XAF",
-                    tva: 19.25,
-                    invoice_type: "purchase" as const,
-                    amount_ht: ext.amount_ht || 0
-                });
-            }
-
-            if (document?.journal_entries?.length) {
-                const entry = document.journal_entries[0];
-                const mapped: EntryLine[] = entry.lines.map((l:JournalEntryLine) => ({  // ✅ Typé
-                    account_id: l.account_id,
-                    account_label: `${l.account.code} - ${l.account.name}`,
-                    debit: l.debit,
-                    credit: l.credit,
-                }));
-                setLines(mapped);
-            }
-        }
-    }, [extraction,document]);*/
     const addLine = (): void => {
         setLines([...lines, { account_id: null, account_label: "", debit: 0, credit: 0 }]);
     };
@@ -285,6 +291,46 @@ export default function DocumentEditPage() {
         return <div>Document non trouvé</div>;
     }
 
+    const sendMessage = async () => {
+        if (!input.trim()) return;
+
+        const text = input;
+        const tempUserMsg = { text, type: 'user' as const }; // Local pendant loading
+
+        setMessages((prev) => Array.isArray(prev) ? [...prev, tempUserMsg] : [tempUserMsg]);
+        setInput("");
+        setLoadingMessage(true);
+
+        try {
+            const res = await api.post(`/documents/${document.id}/messages`, { text });
+            const { success, user_message, ai_message } = res.data || {};
+
+            // ✅ REPLACE + ADD (safe)
+            setMessages((prev) => {
+                const safePrev = Array.isArray(prev) ? prev : [];
+                const newMsgs: Message[] = [];
+
+                // Remplace temp par vrai user_message
+                const updated = safePrev.map(m =>
+                    m.text === text && m.type === 'user' ? user_message : m
+                );
+
+                newMsgs.push(...updated);
+
+               /* if (success && ai_message) {
+                    newMsgs.push(ai_message);
+                }*/
+
+                return newMsgs;
+            });
+
+        } catch (err: any) {
+            console.error(err);
+            // Garde temp message si erreur
+        } finally {
+            setLoadingMessage(false);
+        }
+    };
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
             <div className="max-w-7xl mx-auto">
@@ -312,35 +358,21 @@ export default function DocumentEditPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                     {/* DOCUMENT PREVIEW */}
-                    <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50">
-                        <div className="p-6 border-b border-gray-100">
-                            <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                Aperçu Document
-                            </h2>
+                    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 overflow-hidden flex flex-col max-h-full">
+                        {/* Aperçu document (haut) */}
+                        <div className="flex-1">
+                            <DocumentPreviewCard document={document} />
                         </div>
-                        {/* <DocumentPreview document={document} />*/}
-                          <div className="p-2 flex items-center justify-center h-[500px]">
 
-                        {document.file_path ? (
-                                document.file_path.endsWith(".pdf") ? (
-                                    <iframe
-                                        src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${document.file_path}`}
-                                        className="w-full h-full rounded-xl shadow-inner"
-                                    />
-                                ) : (
-                                    <img
-                                        src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${document.file_path}`}
-                                        className="max-h-full max-w-full object-contain rounded-xl shadow-2xl"
-                                        alt="Document"
-                                    />
-                                )
-                            ) : (
-                                <div className="text-center text-gray-400 py-12">
-                                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-30" />
-                                    <p>Aucun document chargé</p>
-                                </div>
-                            )}
+                        {/* Mini chat utilisateur uniquement (toujours en bas) */}
+                        <div className="border-t border-gray-100 bg-white/80 flex-none">
+                            <MiniChatUserOnly
+                                messages={messages}
+                                input={input}
+                                setInput={setInput}
+                                sendMessage={sendMessage}
+                                loading={loadingMessage}
+                            />
                         </div>
                     </div>
 
@@ -373,9 +405,15 @@ export default function DocumentEditPage() {
                                         onChange={handleChange}
                                         className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                                     >
-                                        <option value="purchase">Achat fournisseur</option>
-                                        <option value="sale">Vente client</option>
-                                        <option value="expense">Dépense diverse</option>
+                                        {Object.values(projectCategories).map((category) => (
+                                            <optgroup key={category.label} label={category.label}>
+                                                {category.types.map((type) => (
+                                                    <option key={type} value={type}>
+                                                        {projectTypeLabels[type]}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>

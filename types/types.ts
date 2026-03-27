@@ -1,3 +1,10 @@
+export interface Message {
+    id?: number;
+    user_id?: number;
+    text: string;
+    type: "user" | "ai";
+    created_at?: string;
+}
 interface Journal {
     id:number;
     name:string;
