@@ -317,9 +317,9 @@ export default function DocumentEditPage() {
 
                 newMsgs.push(...updated);
 
-               /* if (success && ai_message) {
+               if (success && ai_message) {
                     newMsgs.push(ai_message);
-                }*/
+                }
 
                 return newMsgs;
             });
